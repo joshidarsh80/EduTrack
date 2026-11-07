@@ -1,0 +1,132 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "role": { "type": "string", "enum": ["student", "instructor"], "maxLength": 20 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Course created by an instructor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "category": {
+          "type": "string",
+          "enum": ["Web Development", "Programming", "Computer Science", "Database Management", "Design", "Business"],
+          "maxLength": 50
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["Beginner", "Intermediate", "Advanced"],
+          "maxLength": 20
+        },
+        "thumbnailUrl": { "type": "string", "maxLength": 500 },
+        "learningObjectives": { "type": "string", "maxLength": 2000 },
+        "duration": { "type": "string", "maxLength": 50 },
+        "price": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "instructorId": { "type": "string", "maxLength": 128 },
+        "instructorName": { "type": "string", "maxLength": 100 },
+        "instructorEmail": { "type": "string", "maxLength": 128 },
+        "totalLessons": { "type": "number" },
+        "enrolledCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "title", "description", "category", "difficulty", "instructorId", "isPublished"]
+    },
+    "Lesson": {
+      "title": "Lesson",
+      "description": "Individual lesson within a course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "instructorId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "moduleTitle": { "type": "string", "maxLength": 100 },
+        "order": { "type": "number" },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "content": { "type": "string", "maxLength": 10000 },
+        "durationMinutes": { "type": "number" },
+        "isPublished": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "courseId", "instructorId", "title", "order"]
+    },
+    "Enrollment": {
+      "title": "Enrollment",
+      "description": "Student enrollment in a course",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 256 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "instructorId": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "courseTitle": { "type": "string", "maxLength": 150 },
+        "courseThumbnail": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "maxLength": 50 },
+        "enrolledAt": { "type": "string", "maxLength": 50 },
+        "lastAccessedLessonId": { "type": "string", "maxLength": 128 },
+        "lastAccessedAt": { "type": "string", "maxLength": 50 },
+        "completedLessonsCount": { "type": "number" },
+        "totalLessons": { "type": "number" },
+        "progressPercentage": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "completed"], "maxLength": 20 }
+      },
+      "required": ["id", "studentId", "courseId", "enrolledAt"]
+    },
+    "Progress": {
+      "title": "Progress",
+      "description": "Student lesson completion status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 256 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "courseId": { "type": "string", "maxLength": 128 },
+        "lessonId": { "type": "string", "maxLength": 128 },
+        "completed": { "type": "boolean" },
+        "completedAt": { "type": "string", "maxLength": 50 },
+        "updatedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "studentId", "courseId", "lessonId", "completed"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles for students and instructors"
+    },
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Courses created by instructors"
+    },
+    "/lessons/{lessonId}": {
+      "schema": "Lesson",
+      "description": "Curriculum lessons for courses"
+    },
+    "/enrollments/{enrollmentId}": {
+      "schema": "Enrollment",
+      "description": "Student course enrollments"
+    },
+    "/progress/{progressId}": {
+      "schema": "Progress",
+      "description": "Lesson completion tracking records"
+    }
+  }
+}

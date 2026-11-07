@@ -1,0 +1,6 @@
+{
+  "name": "EduTrack - Learning Management System",
+  "description": "EduTrack is a modern, full-stack Learning Management System featuring interactive video learning, student and instructor dashboards, course creation, and progress tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

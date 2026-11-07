@@ -1,0 +1,175 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health check / connection test probe
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Common security helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isInstructor() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'instructor';
+    }
+
+    // User entity validation
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 128 &&
+             (data.role == 'student' || data.role == 'instructor') &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    // Course entity validation
+    function isValidCourse(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.category is string && data.category.size() <= 50 &&
+             data.difficulty is string && data.difficulty.size() <= 20 &&
+             data.instructorId is string && data.instructorId.size() <= 128 &&
+             data.isPublished is bool &&
+             (!('price' in data) || data.price is number) &&
+             (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 500)) &&
+             (!('learningObjectives' in data) || (data.learningObjectives is string && data.learningObjectives.size() <= 2000)) &&
+             (!('duration' in data) || (data.duration is string && data.duration.size() <= 50)) &&
+             (!('instructorName' in data) || (data.instructorName is string && data.instructorName.size() <= 100)) &&
+             (!('instructorEmail' in data) || (data.instructorEmail is string && data.instructorEmail.size() <= 128)) &&
+             (!('totalLessons' in data) || data.totalLessons is number) &&
+             (!('enrolledCount' in data) || data.enrolledCount is number) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    // Lesson entity validation
+    function isValidLesson(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.courseId is string && data.courseId.size() <= 128 &&
+             data.instructorId is string && data.instructorId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+             data.order is number &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+             (!('moduleTitle' in data) || (data.moduleTitle is string && data.moduleTitle.size() <= 100)) &&
+             (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 500)) &&
+             (!('content' in data) || (data.content is string && data.content.size() <= 10000)) &&
+             (!('durationMinutes' in data) || data.durationMinutes is number) &&
+             (!('isPublished' in data) || data.isPublished is bool) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    // Enrollment entity validation
+    function isValidEnrollment(data) {
+      return data.id is string && data.id.size() <= 256 &&
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.courseId is string && data.courseId.size() <= 128 &&
+             (!('instructorId' in data) || (data.instructorId is string && data.instructorId.size() <= 128)) &&
+             (!('courseTitle' in data) || (data.courseTitle is string && data.courseTitle.size() <= 150)) &&
+             (!('courseThumbnail' in data) || (data.courseThumbnail is string && data.courseThumbnail.size() <= 500)) &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+             (!('enrolledAt' in data) || (data.enrolledAt is string && data.enrolledAt.size() <= 50)) &&
+             (!('lastAccessedLessonId' in data) || (data.lastAccessedLessonId is string && data.lastAccessedLessonId.size() <= 128)) &&
+             (!('lastAccessedAt' in data) || (data.lastAccessedAt is string && data.lastAccessedAt.size() <= 50)) &&
+             (!('completedLessonsCount' in data) || data.completedLessonsCount is number) &&
+             (!('totalLessons' in data) || data.totalLessons is number) &&
+             (!('progressPercentage' in data) || data.progressPercentage is number) &&
+             (!('status' in data) || (data.status is string && (data.status == 'active' || data.status == 'completed')));
+    }
+
+    // Progress entity validation
+    function isValidProgress(data) {
+      return data.id is string && data.id.size() <= 256 &&
+             data.studentId is string && data.studentId.size() <= 128 &&
+             data.courseId is string && data.courseId.size() <= 128 &&
+             data.lessonId is string && data.lessonId.size() <= 128 &&
+             data.completed is bool &&
+             (!('completedAt' in data) || (data.completedAt is string && data.completedAt.size() <= 50)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 50));
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || resource.data.role == 'instructor');
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
+                       isValidUser(incoming()) && incoming().id == userId && incoming().role == 'student';
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidId(userId) &&
+                       isValidUser(incoming()) && incoming().id == userId && incoming().role == existing().role;
+      allow delete: if false;
+    }
+
+    // 2. Courses collection
+    match /courses/{courseId} {
+      allow get: if resource.data.isPublished == true || (isSignedIn() && resource.data.instructorId == request.auth.uid);
+      allow list: if resource.data.isPublished == true || (isSignedIn() && resource.data.instructorId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(courseId) && isInstructor() &&
+                       isValidCourse(incoming()) && incoming().id == courseId && incoming().instructorId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(courseId) && resource.data.instructorId == request.auth.uid &&
+                       isValidCourse(incoming()) && incoming().id == existing().id && incoming().instructorId == existing().instructorId;
+      allow delete: if isSignedIn() && isValidId(courseId) && resource.data.instructorId == request.auth.uid;
+    }
+
+    // 3. Lessons collection
+    match /lessons/{lessonId} {
+      allow get: if resource.data.isPublished == true || (isSignedIn() && resource.data.instructorId == request.auth.uid);
+      allow list: if resource.data.isPublished == true || (isSignedIn() && resource.data.instructorId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(lessonId) && isInstructor() &&
+                       isValidLesson(incoming()) && incoming().id == lessonId && incoming().instructorId == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(lessonId) && resource.data.instructorId == request.auth.uid &&
+                       isValidLesson(incoming()) && incoming().id == existing().id &&
+                       incoming().instructorId == existing().instructorId && incoming().courseId == existing().courseId;
+      allow delete: if isSignedIn() && isValidId(lessonId) && resource.data.instructorId == request.auth.uid;
+    }
+
+    // 4. Enrollments collection
+    match /enrollments/{enrollmentId} {
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.instructorId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || resource.data.instructorId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(enrollmentId) &&
+                       isValidEnrollment(incoming()) && incoming().studentId == request.auth.uid && incoming().id == enrollmentId;
+      allow update: if isSignedIn() && isValidId(enrollmentId) && resource.data.studentId == request.auth.uid &&
+                       isValidEnrollment(incoming()) && incoming().studentId == existing().studentId &&
+                       incoming().courseId == existing().courseId && incoming().id == existing().id;
+      allow delete: if isSignedIn() && isValidId(enrollmentId) && resource.data.studentId == request.auth.uid;
+    }
+
+    // 5. Progress collection
+    match /progress/{progressId} {
+      allow get: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(progressId) &&
+                       isValidProgress(incoming()) && incoming().studentId == request.auth.uid && incoming().id == progressId;
+      allow update: if isSignedIn() && isValidId(progressId) && resource.data.studentId == request.auth.uid &&
+                       isValidProgress(incoming()) && incoming().studentId == existing().studentId &&
+                       incoming().courseId == existing().courseId && incoming().lessonId == existing().lessonId && incoming().id == existing().id;
+      allow delete: if isSignedIn() && isValidId(progressId) && resource.data.studentId == request.auth.uid;
+    }
+  }
+}
